@@ -63,7 +63,7 @@ async function fetchColonyLayout(
 
 export async function syncAllColonies(characterId: number) {
   await ensureSdeBundle();
-  const accessToken = await getValidAccessToken();
+  const accessToken = await getValidAccessToken(characterId);
   const listRes = await fetchColonyList(characterId, accessToken);
   const colonies = listRes.data;
   const cached = loadColonyCache(characterId);

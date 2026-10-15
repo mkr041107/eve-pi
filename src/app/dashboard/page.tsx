@@ -3,11 +3,11 @@
 import { useEffect } from "react";
 import { DashboardClient } from "@/components/DashboardClient";
 import { withBasePath } from "@/lib/config/site";
-import { getSession } from "@/lib/sso/client-auth";
+import { listAccounts } from "@/lib/sso/client-auth";
 
 export default function DashboardPage() {
   useEffect(() => {
-    if (!getSession()) {
+    if (listAccounts().length === 0) {
       window.location.href = withBasePath("/");
     }
   }, []);

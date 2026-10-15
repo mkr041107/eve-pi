@@ -1,7 +1,7 @@
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import { getCallbackUrl, getEveClientId } from "@/lib/config/site";
 
-const STORAGE = {
+const LEGACY = {
   refresh: "eve_pi_refresh_token",
   access: "eve_pi_access_token",
   expires: "eve_pi_access_expires_at",
@@ -9,10 +9,103 @@ const STORAGE = {
   characterName: "eve_pi_character_name",
 };
 
+const STORAGE = {
+  accounts: "eve_pi_accounts",
+  activeId: "eve_pi_active_character_id",
+};
+
 export type ClientSession = {
   characterId: number;
   characterName: string;
 };
+
+type StoredAccount = ClientSession & {
+  access: string;
+  refresh: string;
+  expiresAt: number;
+};
+
+function migrateLegacySession() {
+  if (typeof window === "undefined") return;
+  if (localStorage.getItem(STORAGE.accounts)) return;
+
+  const characterId = Number(localStorage.getItem(LEGACY.characterId));
+  const characterName = localStorage.getItem(LEGACY.characterName);
+  const access = localStorage.getItem(LEGACY.access);
+  const refresh = localStorage.getItem(LEGACY.refresh);
+  const expiresAt = Number(localStorage.getItem(LEGACY.expires) ?? "0");
+
+  if (
+    !Number.isFinite(characterId) ||
+    !characterName ||
+    !access ||
+    !refresh
+  ) {
+    return;
+  }
+
+  writeAccounts({
+    [characterId]: {
+      characterId,
+      characterName,
+      access,
+      refresh,
+      expiresAt,
+    },
+  });
+  localStorage.setItem(STORAGE.activeId, String(characterId));
+
+  for (const key of Object.values(LEGACY)) {
+    localStorage.removeItem(key);
+  }
+}
+
+function readAccountsMap(): Record<number, StoredAccount> {
+  if (typeof window === "undefined") return {};
+  migrateLegacySession();
+  const raw = localStorage.getItem(STORAGE.accounts);
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw) as Record<string, StoredAccount>;
+    const out: Record<number, StoredAccount> = {};
+    for (const [key, value] of Object.entries(parsed)) {
+      const id = Number(key);
+      if (Number.isFinite(id) && value?.access && value?.refresh) {
+        out[id] = { ...value, characterId: id };
+      }
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+function writeAccounts(accounts: Record<number, StoredAccount>) {
+  localStorage.setItem(STORAGE.accounts, JSON.stringify(accounts));
+}
+
+function getActiveCharacterId(): number | null {
+  if (typeof window === "undefined") return null;
+  const accounts = readAccountsMap();
+  const stored = Number(localStorage.getItem(STORAGE.activeId));
+  if (Number.isFinite(stored) && accounts[stored]) return stored;
+  const first = Object.keys(accounts)[0];
+  return first ? Number(first) : null;
+}
+
+export function listAccounts(): ClientSession[] {
+  const accounts = readAccountsMap();
+  return Object.values(accounts)
+    .map(({ characterId, characterName }) => ({ characterId, characterName }))
+    .sort((a, b) => a.characterName.localeCompare(b.characterName));
+}
+
+export function setActiveAccount(characterId: number) {
+  if (typeof window === "undefined") return;
+  const accounts = readAccountsMap();
+  if (!accounts[characterId]) return;
+  localStorage.setItem(STORAGE.activeId, String(characterId));
+}
 
 async function getTokenEndpoint() {
   const meta = await fetch(
@@ -77,32 +170,57 @@ function persistTokens(
   expiresIn: number,
   session: ClientSession,
 ) {
-  localStorage.setItem(STORAGE.access, accessToken);
-  localStorage.setItem(STORAGE.refresh, refreshToken);
-  localStorage.setItem(
-    STORAGE.expires,
-    String(Date.now() + expiresIn * 1000),
-  );
-  localStorage.setItem(STORAGE.characterId, String(session.characterId));
-  localStorage.setItem(STORAGE.characterName, session.characterName);
+  const accounts = readAccountsMap();
+  accounts[session.characterId] = {
+    characterId: session.characterId,
+    characterName: session.characterName,
+    access: accessToken,
+    refresh: refreshToken,
+    expiresAt: Date.now() + expiresIn * 1000,
+  };
+  writeAccounts(accounts);
+  localStorage.setItem(STORAGE.activeId, String(session.characterId));
 }
 
 export function getSession(): ClientSession | null {
   if (typeof window === "undefined") return null;
-  const characterId = Number(localStorage.getItem(STORAGE.characterId));
-  const characterName = localStorage.getItem(STORAGE.characterName);
-  if (!Number.isFinite(characterId) || !characterName) return null;
-  return { characterId, characterName };
+  const activeId = getActiveCharacterId();
+  if (activeId === null) return null;
+  const account = readAccountsMap()[activeId];
+  if (!account) return null;
+  return {
+    characterId: account.characterId,
+    characterName: account.characterName,
+  };
 }
 
-export function logout() {
+export function logout(characterId?: number) {
   if (typeof window === "undefined") return;
-  for (const key of Object.values(STORAGE)) {
-    localStorage.removeItem(key);
+  if (characterId === undefined) {
+    localStorage.removeItem(STORAGE.accounts);
+    localStorage.removeItem(STORAGE.activeId);
+    for (const key of Object.values(LEGACY)) {
+      localStorage.removeItem(key);
+    }
+    return;
+  }
+
+  const accounts = readAccountsMap();
+  delete accounts[characterId];
+  writeAccounts(accounts);
+
+  const active = getActiveCharacterId();
+  if (active === characterId) {
+    const remaining = Object.keys(accounts);
+    if (remaining.length > 0) {
+      localStorage.setItem(STORAGE.activeId, remaining[0]);
+    } else {
+      localStorage.removeItem(STORAGE.activeId);
+    }
   }
 }
 
-async function refreshAccessToken(refreshToken: string) {
+async function refreshAccessToken(characterId: number, refreshToken: string) {
   const clientId = getEveClientId();
   if (!clientId) throw new Error("EVE Client ID missing from build");
   const { token_endpoint } = await getTokenEndpoint();
@@ -117,32 +235,36 @@ async function refreshAccessToken(refreshToken: string) {
     body,
   });
   if (!res.ok) {
-    logout();
-    throw new Error("Session expired — log in again");
+    logout(characterId);
+    throw new Error("Session expired — log in again for this character");
   }
   const tokens = (await res.json()) as {
     access_token: string;
     refresh_token?: string;
     expires_in: number;
   };
-  const session = getSession();
-  if (!session) throw new Error("No session");
+  const account = readAccountsMap()[characterId];
+  if (!account) throw new Error("No session");
   persistTokens(
     tokens.access_token,
     tokens.refresh_token ?? refreshToken,
     tokens.expires_in,
-    session,
+    {
+      characterId: account.characterId,
+      characterName: account.characterName,
+    },
   );
   return tokens.access_token;
 }
 
-export async function getValidAccessToken(): Promise<string> {
+export async function getValidAccessToken(characterId: number): Promise<string> {
   if (typeof window === "undefined") throw new Error("Not logged in");
-  const access = localStorage.getItem(STORAGE.access);
-  const expires = Number(localStorage.getItem(STORAGE.expires) ?? "0");
-  if (access && expires > Date.now() + 60_000) return access;
+  const account = readAccountsMap()[characterId];
+  if (!account) throw new Error("Not logged in for this character");
 
-  const refresh = localStorage.getItem(STORAGE.refresh);
-  if (!refresh) throw new Error("Not logged in");
-  return refreshAccessToken(refresh);
+  if (account.access && account.expiresAt > Date.now() + 60_000) {
+    return account.access;
+  }
+
+  return refreshAccessToken(characterId, account.refresh);
 }

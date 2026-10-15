@@ -3,16 +3,16 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getEveClientId } from "@/lib/config/site";
-import { getSession } from "@/lib/sso/client-auth";
+import { listAccounts } from "@/lib/sso/client-auth";
 import { startLogin } from "@/lib/sso/pkce";
 
 export function AuthHome() {
-  const [loggedIn, setLoggedIn] = useState(false);
+  const [accounts, setAccounts] = useState<{ characterId: number; characterName: string }[]>([]);
   const [loginError, setLoginError] = useState<string | null>(null);
   const clientConfigured = Boolean(getEveClientId());
 
   useEffect(() => {
-    setLoggedIn(Boolean(getSession()));
+    setAccounts(listAccounts());
   }, []);
 
   async function onLogin() {
@@ -46,13 +46,27 @@ export function AuthHome() {
         <p className="text-sm text-red-400" role="alert">{loginError}</p>
       )}
 
-      {loggedIn ? (
-        <Link
-          href="/dashboard"
-          className="rounded-full bg-cyan-800 px-6 py-3 font-medium hover:bg-cyan-700"
-        >
-          Open dashboard
-        </Link>
+      {accounts.length > 0 ? (
+        <div className="flex flex-col items-center gap-3">
+          <p className="text-sm text-zinc-400">
+            {accounts.length} character{accounts.length === 1 ? "" : "s"}:{" "}
+            {accounts.map((a) => a.characterName).join(", ")}
+          </p>
+          <Link
+            href="/dashboard"
+            className="rounded-full bg-cyan-800 px-6 py-3 font-medium hover:bg-cyan-700"
+          >
+            Open dashboard
+          </Link>
+          <button
+            type="button"
+            onClick={() => void onLogin()}
+            disabled={!clientConfigured}
+            className="text-sm text-cyan-400 hover:text-cyan-300 disabled:opacity-50"
+          >
+            Add another character
+          </button>
+        </div>
       ) : (
         <button
           type="button"
