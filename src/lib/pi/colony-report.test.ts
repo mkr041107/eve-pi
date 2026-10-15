@@ -54,5 +54,7 @@ describe("buildColonyOperationsReport", () => {
     assert.ok(report.factories[0].inputsPerCycle.length > 0);
     assert.equal(report.launchpadRoutes.length, 1);
     assert.equal(report.launchpadRoutes[0].direction, "from_launchpad");
+    assert.match(report.launchpadRoutes[0].sourceFacilityName, /Launchpad/i);
+    assert.match(report.launchpadRoutes[0].destinationFacilityName, /Industry/i);
   });
 });

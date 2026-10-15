@@ -32,12 +32,20 @@ export type FactorySnapshot = {
 export type LaunchpadRouteRow = {
   routeId: number;
   direction: "into_launchpad" | "from_launchpad";
-  sourcePinId: number;
-  destinationPinId: number;
+  sourceFacilityName: string;
+  destinationFacilityName: string;
   typeId: number;
   name: string;
   quantityPerHour: number;
 };
+
+function facilityNameForPin(
+  pins: Map<number, { type_id: number }>,
+  pinId: number,
+): string {
+  const pin = pins.get(pinId);
+  return pin ? getTypeName(pin.type_id) : "Unknown facility";
+}
 
 export type ColonyOperationsReport = {
   launchpads: LaunchpadSnapshot[];
@@ -109,8 +117,11 @@ export function buildColonyOperationsReport(
     launchpadRoutes.push({
       routeId: route.route_id,
       direction: toPad ? "into_launchpad" : "from_launchpad",
-      sourcePinId: route.source_pin_id,
-      destinationPinId: route.destination_pin_id,
+      sourceFacilityName: facilityNameForPin(pins, route.source_pin_id),
+      destinationFacilityName: facilityNameForPin(
+        pins,
+        route.destination_pin_id,
+      ),
       typeId: route.content_type_id,
       name: getTypeName(route.content_type_id),
       quantityPerHour: Math.round(route.quantity),

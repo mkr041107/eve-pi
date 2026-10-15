@@ -28,9 +28,7 @@ export function ColonyOperationsReportView({ report }: Props) {
               key={pad.pinId}
               className="rounded border border-zinc-800/80 bg-zinc-900/30 p-3"
             >
-              <p className="mb-2 text-xs text-zinc-500">
-                Pin {pad.pinId} · {pad.typeName}
-              </p>
+              <p className="mb-2 text-sm text-zinc-200">{pad.typeName}</p>
               <ImportExportTable
                 title="Contents"
                 rows={pad.contents.map((c) => ({
@@ -53,13 +51,11 @@ export function ColonyOperationsReportView({ report }: Props) {
               key={f.pinId}
               className="rounded border border-zinc-800/80 bg-zinc-900/30 p-3"
             >
-              <p className="text-sm text-zinc-200">
-                Pin {f.pinId} · {f.facilityTypeName}
-              </p>
+              <p className="text-sm text-zinc-200">{f.facilityTypeName}</p>
               <p className="text-xs text-zinc-500">
                 {f.schematicName
-                  ? `Recipe: ${f.schematicName} (id ${f.schematicId}) · ~${f.cyclesPerHour} cycles/h`
-                  : "No active schematic on this pin."}
+                  ? `Recipe: ${f.schematicName} · ~${f.cyclesPerHour} cycles/h`
+                  : "No active schematic configured."}
               </p>
               <div className="mt-3 grid gap-4 md:grid-cols-3">
                 <ImportExportTable
@@ -109,8 +105,8 @@ export function ColonyOperationsReportView({ report }: Props) {
                 <th className="py-1 pr-2">Direction</th>
                 <th className="py-1 pr-2">Commodity</th>
                 <th className="py-1 pr-2">Qty / h</th>
-                <th className="py-1 pr-2">From pin</th>
-                <th className="py-1">To pin</th>
+                <th className="py-1 pr-2">From</th>
+                <th className="py-1">To</th>
               </tr>
             </thead>
             <tbody>
@@ -123,8 +119,8 @@ export function ColonyOperationsReportView({ report }: Props) {
                   <td className="py-1 pr-2 tabular-nums">
                     {r.quantityPerHour.toLocaleString()}
                   </td>
-                  <td className="py-1 pr-2 tabular-nums">{r.sourcePinId}</td>
-                  <td className="py-1 tabular-nums">{r.destinationPinId}</td>
+                  <td className="py-1 pr-2">{r.sourceFacilityName}</td>
+                  <td className="py-1">{r.destinationFacilityName}</td>
                 </tr>
               ))}
             </tbody>
