@@ -3,9 +3,13 @@ import { ImportExportTable } from "./ImportExportTable";
 
 type Colony = {
   planetId: number;
+  planetName: string;
   solarSystemId: number;
+  solarSystemName: string;
   planetType: string;
+  planetTypeLabel: string;
   lastFetchedAt?: string;
+  grossFactoryInputs: { typeId: number; name: string; quantity: number }[];
   netImports: { typeId: number; name: string; quantity: number }[];
   exports: { typeId: number; name: string; quantity: number }[];
   extractors: {
@@ -21,15 +25,19 @@ export function ColonyCard({ colony }: { colony: Colony }) {
   return (
     <details className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4" open>
       <summary className="cursor-pointer font-medium">
-        Planet {colony.planetId} · {colony.planetType} · system{" "}
-        {colony.solarSystemId}
+        {colony.planetName} · {colony.planetTypeLabel} · {colony.solarSystemName}
         {colony.lastFetchedAt && (
           <span className="ml-2 text-xs font-normal text-zinc-500">
             layout cached {new Date(colony.lastFetchedAt).toLocaleString()}
           </span>
         )}
       </summary>
-      <div className="mt-4 grid gap-6 md:grid-cols-2">
+      <div className="mt-4 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <ImportExportTable
+          title="Factory inputs required (all tiers)"
+          rows={colony.grossFactoryInputs}
+          emptyLabel="No active factory schematics detected."
+        />
         <ImportExportTable
           title="Net orbit imports needed"
           rows={colony.netImports}

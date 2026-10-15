@@ -1,5 +1,5 @@
 import type { ColonyLayout } from "@/lib/esi/types";
-import { getSchematic } from "@/lib/sde/load";
+import { factoryCyclesPerHour, getSchematic } from "@/lib/sde/load";
 import { buildColonyGraph, factorySchematicId } from "./graph";
 import {
   calculateExtractorCycleYield,
@@ -65,7 +65,7 @@ export function simulateColonyHours(layout: ColonyLayout, hours: number) {
       if (!schematic) continue;
       const inputs = schematic.types.filter((t) => t.isInput);
       const outputs = schematic.types.filter((t) => !t.isInput);
-      const maxCycles = 3600 / schematic.cycleTimeSeconds;
+      const maxCycles = factoryCyclesPerHour(pin.type_id, schematicId);
       let ran = 0;
       while (ran < maxCycles) {
         const canRun = inputs.every(
@@ -102,6 +102,7 @@ export function simulateColonyHours(layout: ColonyLayout, hours: number) {
 
   for (let h = 0; h < hours; h++) {
     tickExtractorProduction();
+    runRoutes();
     runFactoryCycles();
     runRoutes();
   }
@@ -120,7 +121,8 @@ export function grossFactoryDemand(
     if (!schematicId) continue;
     const schematic = getSchematic(schematicId);
     if (!schematic) continue;
-    const cycles = (hours * 3600) / schematic.cycleTimeSeconds;
+    const cycles =
+      factoryCyclesPerHour(pin.type_id, schematicId) * hours;
     for (const input of schematic.types.filter((t) => t.isInput)) {
       demand[input.typeId] =
         (demand[input.typeId] ?? 0) + input.quantity * cycles;

@@ -1,6 +1,6 @@
 import type { ColonyLayout } from "@/lib/esi/types";
 import { buildColonyGraph, factorySchematicId } from "./graph";
-import { getSchematic } from "@/lib/sde/load";
+import { factoryCyclesPerHour, getSchematic } from "@/lib/sde/load";
 
 export function computeBurnRatePerHour(
   layouts: ColonyLayout[],
@@ -14,7 +14,7 @@ export function computeBurnRatePerHour(
       if (!schematicId) continue;
       const schematic = getSchematic(schematicId);
       if (!schematic) continue;
-      const cyclesPerHour = 3600 / schematic.cycleTimeSeconds;
+      const cyclesPerHour = factoryCyclesPerHour(pin.type_id, schematicId);
       for (const input of schematic.types.filter((t) => t.isInput)) {
         if (input.typeId === typeId) {
           rate += input.quantity * cyclesPerHour;

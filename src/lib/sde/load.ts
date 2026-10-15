@@ -37,3 +37,24 @@ export function getSchematic(schematicId: number) {
   const b = requireBundle();
   return b.schematics[schematicId] as SdeBundle["schematics"][number];
 }
+
+export function isFactoryTypeId(typeId: number): boolean {
+  const b = requireBundle();
+  return (b.factoryTypeIds ?? []).includes(typeId);
+}
+
+/** Basic = 1×, Advanced = 2×, High-Tech = 4× cycles per hour vs schematic base time. */
+export function getFactorySpeedMultiplier(facilityTypeId: number): number {
+  const b = requireBundle();
+  return b.factorySpeedMultiplier?.[facilityTypeId] ?? 1;
+}
+
+export function factoryCyclesPerHour(
+  facilityTypeId: number,
+  schematicId: number,
+): number {
+  const schematic = getSchematic(schematicId);
+  if (!schematic?.cycleTimeSeconds) return 0;
+  const speed = getFactorySpeedMultiplier(facilityTypeId);
+  return (3600 / schematic.cycleTimeSeconds) * speed;
+}

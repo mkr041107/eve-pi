@@ -53,9 +53,14 @@ function ForecastPanels({ data }: { data: ForecastResponse }) {
   return (
     <>
       <StaleDataBanner message={data.forecast.staleWarning} />
-      <section className="grid gap-6 md:grid-cols-2">
+      <section className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <ImportExportTable
-          title={`Total net orbit imports (${data.forecast.horizonHours}h)`}
+          title={`Factory inputs required (${data.forecast.horizonHours}h)`}
+          rows={data.forecast.totals.grossFactoryInputs}
+          emptyLabel="No active factory schematics detected."
+        />
+        <ImportExportTable
+          title={`Net orbit imports (${data.forecast.horizonHours}h)`}
           rows={data.forecast.totals.netImports}
           emptyLabel="No net imports required."
         />
@@ -174,6 +179,9 @@ export function DashboardClient() {
     const horizon = combinedData[0]?.forecast.horizonHours ?? hours;
     return {
       horizonHours: horizon,
+      grossFactoryInputs: mergeCommodityRows(
+        combinedData.flatMap((d) => d.forecast.totals.grossFactoryInputs),
+      ),
       netImports: mergeCommodityRows(
         combinedData.flatMap((d) => d.forecast.totals.netImports),
       ),
@@ -359,7 +367,12 @@ export function DashboardClient() {
           {combinedTotals.staleWarnings.map((msg, i) => (
             <StaleDataBanner key={i} message={msg} />
           ))}
-          <section className="grid gap-6 md:grid-cols-2">
+          <section className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <ImportExportTable
+              title={`All characters — factory inputs (${combinedTotals.horizonHours}h)`}
+              rows={combinedTotals.grossFactoryInputs}
+              emptyLabel="No active factory schematics detected."
+            />
             <ImportExportTable
               title={`All characters — net orbit imports (${combinedTotals.horizonHours}h)`}
               rows={combinedTotals.netImports}

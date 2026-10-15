@@ -8,6 +8,7 @@ import {
   setHorizonHours,
   type CachedColony,
 } from "@/lib/storage/local-data";
+import { resolveUniverseNames } from "@/lib/esi/universe-names";
 import { buildForecast } from "@/lib/pi/forecast";
 import { ensureSdeBundle } from "@/lib/sde/load";
 
@@ -102,7 +103,12 @@ export async function loadForecast(characterId: number, characterName: string, h
   }
 
   const { colonies, layouts } = await syncAllColonies(characterId);
-  const forecast = buildForecast(colonies, layouts, horizon);
+  const nameIds = [
+    ...colonies.map((c) => c.planet_id),
+    ...colonies.map((c) => c.solar_system_id),
+  ];
+  const names = await resolveUniverseNames(nameIds);
+  const forecast = buildForecast(colonies, layouts, horizon, names);
 
   return {
     character: { characterId, characterName },

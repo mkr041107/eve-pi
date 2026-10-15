@@ -64,12 +64,14 @@ async function main() {
       _key: number;
       cycleTime: number;
       name: { en: string };
+      pins?: number[];
       types: { _key: number; isInput: boolean; quantity: number }[];
     };
     schematics[row._key] = {
       schematicId: row._key,
       cycleTimeSeconds: row.cycleTime,
       name: row.name.en,
+      pinTypeIds: row.pins ?? [],
       types: row.types.map((t) => ({
         typeId: t._key,
         isInput: t.isInput,
@@ -80,16 +82,30 @@ async function main() {
 
   const typeNames: Record<number, string> = {};
   const launchPadTypeIds: number[] = [];
+  const factoryTypeIds: number[] = [];
+  const factorySpeedMultiplier: Record<number, number> = {};
   for (const line of readFileSync(typesPath, "utf8").split("\n")) {
     if (!line.trim()) continue;
     const row = JSON.parse(line) as {
       _key: number;
+      groupID?: number;
       name?: { en?: string };
     };
     const name = row.name?.en ?? `Type ${row._key}`;
     typeNames[row._key] = name;
     if (name.toLowerCase().includes("launchpad")) {
       launchPadTypeIds.push(row._key);
+    }
+    if (row.groupID === 1028) {
+      factoryTypeIds.push(row._key);
+      const lower = name.toLowerCase();
+      if (lower.includes("high-tech")) {
+        factorySpeedMultiplier[row._key] = 4;
+      } else if (lower.includes("advanced")) {
+        factorySpeedMultiplier[row._key] = 2;
+      } else {
+        factorySpeedMultiplier[row._key] = 1;
+      }
     }
   }
 
@@ -104,6 +120,8 @@ async function main() {
     buildNumber: meta.buildNumber,
     typeNames,
     launchPadTypeIds,
+    factoryTypeIds,
+    factorySpeedMultiplier,
     schematics,
   };
 

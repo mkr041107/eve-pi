@@ -1,5 +1,9 @@
 import type { ColonyLayout, ColonyPin } from "@/lib/esi/types";
-import { getSchematic, isLaunchPadType } from "@/lib/sde/load";
+import {
+  getSchematic,
+  isFactoryTypeId,
+  isLaunchPadType,
+} from "@/lib/sde/load";
 
 export type PinKind = "launchpad" | "factory" | "extractor" | "storage" | "other";
 
@@ -10,7 +14,12 @@ export function classifyPin(pin: ColonyPin): PinKind {
   if (isLaunchPadType(pin.type_id)) return "launchpad";
   const schematicId =
     pin.factory_details?.schematic_id ?? pin.schematic_id ?? null;
-  if (schematicId && getSchematic(schematicId)) return "factory";
+  if (
+    schematicId &&
+    (getSchematic(schematicId) || isFactoryTypeId(pin.type_id))
+  ) {
+    return "factory";
+  }
   return "storage";
 }
 
