@@ -9,6 +9,7 @@ import path from "path";
 import { pipeline } from "stream/promises";
 import { Readable } from "stream";
 import { execFileSync } from "child_process";
+import { platform } from "os";
 
 const OUT_DIR = path.join(process.cwd(), "data", "sde");
 const ZIP_URL =
@@ -25,15 +26,19 @@ async function download(url: string, dest: string) {
 
 function extractZip(zipPath: string, destDir: string) {
   if (!existsSync(destDir)) mkdirSync(destDir, { recursive: true });
-  execFileSync(
-    "powershell",
-    [
-      "-NoProfile",
-      "-Command",
-      `Expand-Archive -LiteralPath '${zipPath.replace(/'/g, "''")}' -DestinationPath '${destDir.replace(/'/g, "''")}' -Force`,
-    ],
-    { stdio: "inherit" },
-  );
+  if (platform() === "win32") {
+    execFileSync(
+      "powershell",
+      [
+        "-NoProfile",
+        "-Command",
+        `Expand-Archive -LiteralPath '${zipPath.replace(/'/g, "''")}' -DestinationPath '${destDir.replace(/'/g, "''")}' -Force`,
+      ],
+      { stdio: "inherit" },
+    );
+  } else {
+    execFileSync("unzip", ["-o", zipPath, "-d", destDir], { stdio: "inherit" });
+  }
 }
 
 async function main() {
