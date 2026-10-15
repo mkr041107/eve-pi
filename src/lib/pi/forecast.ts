@@ -1,6 +1,7 @@
 import type { ColonyLayout, ColonySummary } from "@/lib/esi/types";
 import { getTypeName } from "@/lib/sde/load";
 import { formatPlanetType } from "@/lib/esi/universe-names";
+import { buildColonyOperationsReport, type ColonyOperationsReport } from "./colony-report";
 import { analyzeP0Extraction, type P0ExtractionAlert } from "./p0-balance";
 import {
   grossFactoryDemand,
@@ -9,7 +10,7 @@ import {
   simulateColonyHours,
 } from "./simulate";
 
-export type { P0ExtractionAlert };
+export type { ColonyOperationsReport, P0ExtractionAlert };
 
 export type CommodityAmount = {
   typeId: number;
@@ -30,6 +31,7 @@ export type ColonyForecast = {
   exports: CommodityAmount[];
   extractors: ReturnType<typeof listExtractors>;
   p0Alerts: P0ExtractionAlert[];
+  operations: ColonyOperationsReport;
 };
 
 export type DashboardForecast = {
@@ -95,6 +97,7 @@ export function buildForecast(
       exports: toCommodityList(sim.exportsToPad),
       extractors: listExtractors(layout),
       p0Alerts,
+      operations: buildColonyOperationsReport(layout),
     });
   }
 

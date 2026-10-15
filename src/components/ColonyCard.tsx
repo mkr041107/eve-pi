@@ -1,3 +1,5 @@
+import type { ColonyOperationsReport } from "@/lib/pi/colony-report";
+import { ColonyOperationsReportView } from "./ColonyOperationsReport";
 import { ExtractorList } from "./ExtractorList";
 import { ImportExportTable } from "./ImportExportTable";
 
@@ -28,6 +30,7 @@ type Colony = {
     status: string;
     productTypeId?: number;
   }[];
+  operations: ColonyOperationsReport;
 };
 
 export function ColonyCard({ colony }: { colony: Colony }) {
@@ -67,6 +70,14 @@ export function ColonyCard({ colony }: { colony: Colony }) {
         <h3 className="mb-2 text-sm font-medium text-zinc-300">Extractors</h3>
         <ExtractorList extractors={colony.extractors} />
       </div>
+      <details className="mt-6 rounded border border-zinc-800/60 p-3">
+        <summary className="cursor-pointer text-sm font-medium text-zinc-300">
+          Launchpads, factories &amp; routes (ESI layout)
+        </summary>
+        <div className="mt-4">
+          <ColonyOperationsReportView report={colony.operations} />
+        </div>
+      </details>
     </details>
   );
 }
