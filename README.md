@@ -1,8 +1,18 @@
 # EVE PI Dashboard
 
-Static Next.js app for EVE Online planetary industry: EVE SSO (PKCE), ESI colony sync, SDE-backed production forecasts, and manual import timers.
+[![Deploy to GitHub Pages](https://github.com/mkr041107/eve-pi/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/mkr041107/eve-pi/actions/workflows/deploy-pages.yml)
+[![Live app](https://img.shields.io/website?url=https%3A%2F%2Fmkr041107.github.io%2Feve-pi%2F&label=live%20site)](https://mkr041107.github.io/eve-pi/)
 
-**Deploy on GitHub Pages:** see [GH-PAGES.md](./GH-PAGES.md).
+Static Next.js app for EVE Online planetary industry: **EVE SSO (PKCE)**, ESI colony sync, SDE-backed production forecasts, and manual import timers. Runs entirely in the browser on GitHub Pages.
+
+| | |
+|---|---|
+| **Live app** | **[https://mkr041107.github.io/eve-pi/](https://mkr041107.github.io/eve-pi/)** |
+| **Builds** | [GitHub Actions → Deploy to GitHub Pages](https://github.com/mkr041107/eve-pi/actions/workflows/deploy-pages.yml) |
+| **Pages settings** | [Repository Pages](https://github.com/mkr041107/eve-pi/settings/pages) |
+| **Deploy guide** | [GH-PAGES.md](./GH-PAGES.md) |
+
+[Open live app →](https://mkr041107.github.io/eve-pi/) · [Run / view deploy workflow →](https://github.com/mkr041107/eve-pi/actions/workflows/deploy-pages.yml)
 
 ## Features
 
@@ -10,34 +20,48 @@ Static Next.js app for EVE Online planetary industry: EVE SSO (PKCE), ESI colony
 - Net **orbit imports** needed to keep factories running
 - **Export** volumes to launch pads over the horizon
 - **Extractor** time remaining
-- **Manual stock** entries with persisted empty time
+- **Manual stock** entries with depletion timers (stored in your browser)
 
-## Setup
+## EVE SSO (production)
+
+1. Register an app at [developers.eveonline.com](https://developers.eveonline.com/) with scope `esi-planets.manage_planets.v1` (PKCE — **no client secret** in the static app).
+2. Callback URL: `https://mkr041107.github.io/eve-pi/auth/callback/` (trailing slash).
+3. GitHub repo secret **`EVE_CLIENT_ID`** → used at build time as `NEXT_PUBLIC_EVE_CLIENT_ID`.
+4. Push to `main` or **Actions → Deploy to GitHub Pages → Run workflow** to redeploy after changing the Client ID.
+
+Colony layout in ESI only refreshes after you **open each colony in the EVE client**.
+
+## Local development
+
+1. Copy [`.env.example`](./.env.example) to `.env.local` and set `NEXT_PUBLIC_EVE_CLIENT_ID` (and local callback `http://localhost:3000/auth/callback/` in the dev portal).
+2. `npm run install:deps` (or `npm install` on a clean tree).
+3. `npm run sync:sde`
+4. `npm run dev` → [http://localhost:3000](http://localhost:3000)
 
 ### If `npm install` fails on Windows (ENOTEMPTY / EPERM)
 
-Overlapping installs or deleting `node_modules` while npm is running leaves locked folders under `node_modules\next`. **Do not** loop `rmdir node_modules` + `npm install`. Use:
+Do not repeatedly delete `node_modules` while npm is running. Use:
 
 ```powershell
 npm run install:deps
 ```
 
-That renames the broken folder aside and installs cleanly. Close other terminals running `next dev` first. Exclude `F:\Webapps\eve-pi\node_modules` from real-time antivirus scanning if installs keep failing.
-
-1. Copy `.env.example` to `.env.local` and fill in values.
-2. Register an application at [developers.eveonline.com](https://developers.eveonline.com/) with scope `esi-planets.manage_planets.v1` and callback URL(s) matching `EVE_CALLBACK_URL`.
-3. Create a Postgres database and set `DATABASE_URL`.
-4. Apply schema: `psql $DATABASE_URL -f drizzle/0000_init.sql` (or `npm run db:push` once Drizzle is configured).
-5. Install and run SDE sync: `npm install` then `npm run sync:sde`.
-6. `npm run dev` → open `http://localhost:3000`.
+Close other `next dev` terminals first.
 
 ## Scripts
 
 | Script | Purpose |
 |--------|---------|
 | `npm run dev` | Local development |
-| `npm run sync:sde` | Download SDE and build `data/sde/bundle.json` |
-| `npm run build` | Sync SDE + production build |
+| `npm run sync:sde` | Download SDE → `public/data/sde/bundle.json` |
+| `npm run build` | SDE sync + static export (`out/`) |
 | `npm test` | Unit tests (PI extraction formula) |
+| `npm run install:deps` | Safe Windows reinstall (rename + `npm install`) |
 
-See [DEPLOY.md](./DEPLOY.md) for hosted deployment.
+## Optional self-hosted stack
+
+Postgres, server-side SSO, and Drizzle files under `src/db/` are legacy from an earlier hosted design and are **not** used on GitHub Pages. See [DEPLOY.md](./DEPLOY.md) if you run your own server.
+
+## License
+
+Third-party EVE Online data via [CCP](https://developers.eveonline.com/docs/resources/license/). This project is not affiliated with CCP.
