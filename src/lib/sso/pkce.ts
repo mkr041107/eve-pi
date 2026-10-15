@@ -1,4 +1,4 @@
-import { getCallbackUrl } from "@/lib/config/site";
+import { getCallbackUrl, getEveClientId } from "@/lib/config/site";
 
 const SCOPES = "esi-planets.manage_planets.v1";
 const VERIFIER_KEY = "eve_pi_pkce_verifier";
@@ -24,9 +24,11 @@ export async function generatePkcePair() {
 }
 
 export async function startLogin() {
-  const clientId = process.env.NEXT_PUBLIC_EVE_CLIENT_ID;
+  const clientId = getEveClientId();
   if (!clientId) {
-    throw new Error("NEXT_PUBLIC_EVE_CLIENT_ID is not configured");
+    throw new Error(
+      "EVE Client ID is missing from this build. Set the EVE_CLIENT_ID repository secret and redeploy.",
+    );
   }
 
   const meta = await fetch(

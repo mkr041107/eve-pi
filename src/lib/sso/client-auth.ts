@@ -1,5 +1,5 @@
 import { createRemoteJWKSet, jwtVerify } from "jose";
-import { getCallbackUrl } from "@/lib/config/site";
+import { getCallbackUrl, getEveClientId } from "@/lib/config/site";
 
 const STORAGE = {
   refresh: "eve_pi_refresh_token",
@@ -25,8 +25,8 @@ export async function exchangeAuthorizationCode(
   code: string,
   codeVerifier: string,
 ) {
-  const clientId = process.env.NEXT_PUBLIC_EVE_CLIENT_ID;
-  if (!clientId) throw new Error("NEXT_PUBLIC_EVE_CLIENT_ID missing");
+  const clientId = getEveClientId();
+  if (!clientId) throw new Error("EVE Client ID missing from build");
 
   const { token_endpoint, jwks_uri, issuer } = await getTokenEndpoint();
   const body = new URLSearchParams({
@@ -103,8 +103,8 @@ export function logout() {
 }
 
 async function refreshAccessToken(refreshToken: string) {
-  const clientId = process.env.NEXT_PUBLIC_EVE_CLIENT_ID;
-  if (!clientId) throw new Error("NEXT_PUBLIC_EVE_CLIENT_ID missing");
+  const clientId = getEveClientId();
+  if (!clientId) throw new Error("EVE Client ID missing from build");
   const { token_endpoint } = await getTokenEndpoint();
   const body = new URLSearchParams({
     grant_type: "refresh_token",

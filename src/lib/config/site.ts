@@ -15,7 +15,12 @@ export function getAppBaseUrl(): string {
 }
 
 export function getCallbackUrl(): string {
-  return `${getAppBaseUrl()}/auth/callback`;
+  // Must match EVE dev portal and Next `trailingSlash: true`
+  return `${getAppBaseUrl()}/auth/callback/`;
+}
+
+export function getEveClientId(): string {
+  return process.env.NEXT_PUBLIC_EVE_CLIENT_ID ?? "";
 }
 
 export function withBasePath(path: string): string {

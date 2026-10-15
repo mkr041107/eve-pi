@@ -11,7 +11,7 @@ This app is a **static export** (no server). Auth uses **EVE SSO + PKCE** in the
 3. Scope: `esi-planets.manage_planets.v1`.
 4. Callback URL (replace `USER` and `REPO`):
 
-   `https://USER.github.io/REPO/auth/callback/`
+   `https://USER.github.io/REPO/auth/callback/` (trailing slash required)
 
    Example for repo `mkrus/eve-pi`:
 
