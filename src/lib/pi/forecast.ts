@@ -1,12 +1,15 @@
 import type { ColonyLayout, ColonySummary } from "@/lib/esi/types";
 import { getTypeName } from "@/lib/sde/load";
 import { formatPlanetType } from "@/lib/esi/universe-names";
+import { analyzeP0Extraction, type P0ExtractionAlert } from "./p0-balance";
 import {
   grossFactoryDemand,
   listExtractors,
   netOrbitImports,
   simulateColonyHours,
 } from "./simulate";
+
+export type { P0ExtractionAlert };
 
 export type CommodityAmount = {
   typeId: number;
@@ -26,6 +29,7 @@ export type ColonyForecast = {
   netImports: CommodityAmount[];
   exports: CommodityAmount[];
   extractors: ReturnType<typeof listExtractors>;
+  p0Alerts: P0ExtractionAlert[];
 };
 
 export type DashboardForecast = {
@@ -74,8 +78,10 @@ export function buildForecast(
     const solarSystemId = summary?.solar_system_id ?? 0;
     const planetType = summary?.planet_type ?? "unknown";
     const gross = grossFactoryDemand(layout, horizonHours);
-    const net = netOrbitImports(layout, horizonHours);
+    const netMap = netOrbitImports(layout, horizonHours);
+    const net = netMap;
     const sim = simulateColonyHours(layout, horizonHours);
+    const p0Alerts = analyzeP0Extraction(layout, horizonHours, netMap);
     colonies.push({
       planetId,
       planetName: names?.[planetId] ?? `Planet ${planetId}`,
@@ -85,9 +91,10 @@ export function buildForecast(
       planetTypeLabel: formatPlanetType(planetType),
       lastFetchedAt: fetchedAt?.toISOString(),
       grossFactoryInputs: toCommodityList(gross),
-      netImports: toCommodityList(net),
+      netImports: toCommodityList(netMap),
       exports: toCommodityList(sim.exportsToPad),
       extractors: listExtractors(layout),
+      p0Alerts,
     });
   }
 

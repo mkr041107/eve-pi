@@ -19,6 +19,10 @@ import { ColonyCard } from "./ColonyCard";
 import { HorizonControl } from "./HorizonControl";
 import { ImportExportTable } from "./ImportExportTable";
 import { ManualStockForm } from "./ManualStockForm";
+import {
+  P0ExtractionScanPanel,
+  type P0ScanRow,
+} from "./P0ExtractionScanPanel";
 import { StaleDataBanner } from "./StaleDataBanner";
 
 type ForecastResponse = Awaited<ReturnType<typeof loadForecast>>;
@@ -95,6 +99,9 @@ export function DashboardClient() {
   >([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [p0ScanRows, setP0ScanRows] = useState<P0ScanRow[]>([]);
+  const [p0Scanning, setP0Scanning] = useState(false);
+  const [p0ScanAt, setP0ScanAt] = useState<Date | null>(null);
 
   const activeSession = useMemo(
     () => accounts.find((a) => a.characterId === activeId) ?? null,
@@ -240,6 +247,41 @@ export function DashboardClient() {
     void loadForecastData(hours);
   }
 
+  async function runP0Scan() {
+    const currentAccounts = listAccounts();
+    if (currentAccounts.length === 0) return;
+    setP0Scanning(true);
+    setError(null);
+    try {
+      const rows: P0ScanRow[] = [];
+      for (const account of currentAccounts) {
+        const data = await loadForecast(
+          account.characterId,
+          account.characterName,
+          hours,
+        );
+        for (const colony of data.forecast.colonies) {
+          if (colony.p0Alerts.length === 0) continue;
+          rows.push({
+            characterId: account.characterId,
+            characterName: account.characterName,
+            planetId: colony.planetId,
+            planetName: colony.planetName,
+            solarSystemName: colony.solarSystemName,
+            planetTypeLabel: colony.planetTypeLabel,
+            alerts: colony.p0Alerts,
+          });
+        }
+      }
+      setP0ScanRows(rows);
+      setP0ScanAt(new Date());
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "P0 scan failed");
+    } finally {
+      setP0Scanning(false);
+    }
+  }
+
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-10">
       <header className="flex flex-wrap items-center justify-between gap-4">
@@ -348,6 +390,14 @@ export function DashboardClient() {
         onChange={(h) => {
           if (h > 0) void loadForecastData(h);
         }}
+      />
+
+      <P0ExtractionScanPanel
+        rows={p0ScanRows}
+        horizonHours={hours}
+        loading={p0Scanning}
+        lastRunAt={p0ScanAt}
+        onScan={() => void runP0Scan()}
       />
 
       {error && (

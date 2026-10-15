@@ -12,6 +12,15 @@ type Colony = {
   grossFactoryInputs: { typeId: number; name: string; quantity: number }[];
   netImports: { typeId: number; name: string; quantity: number }[];
   exports: { typeId: number; name: string; quantity: number }[];
+  p0Alerts: {
+    typeId: number;
+    name: string;
+    factoryDemand: number;
+    projectedExtraction: number;
+    onHand: number;
+    shortfall: number;
+    netOrbitImport: number;
+  }[];
   extractors: {
     pinId: number;
     expiryTime?: string;
@@ -26,6 +35,11 @@ export function ColonyCard({ colony }: { colony: Colony }) {
     <details className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4" open>
       <summary className="cursor-pointer font-medium">
         {colony.planetName} · {colony.planetTypeLabel} · {colony.solarSystemName}
+        {colony.p0Alerts.length > 0 && (
+          <span className="ml-2 rounded bg-amber-900/50 px-2 py-0.5 text-xs font-normal text-amber-200">
+            P0 shortfall
+          </span>
+        )}
         {colony.lastFetchedAt && (
           <span className="ml-2 text-xs font-normal text-zinc-500">
             layout cached {new Date(colony.lastFetchedAt).toLocaleString()}

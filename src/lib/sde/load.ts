@@ -3,6 +3,11 @@ import { getBasePath } from "@/lib/config/site";
 
 let bundle: SdeBundle | null = null;
 
+/** Test / script hook to load bundle without fetch. */
+export function setSdeBundle(data: SdeBundle) {
+  bundle = data;
+}
+
 export async function ensureSdeBundle(): Promise<SdeBundle> {
   if (bundle) return bundle;
   const base = getBasePath();
