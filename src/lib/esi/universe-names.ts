@@ -1,3 +1,5 @@
+import type { ColonySummary } from "@/lib/esi/types";
+
 const CACHE_KEY = "eve_pi_universe_names_v1";
 
 function compatibilityDate(): string {
@@ -12,6 +14,16 @@ function userAgentParam(): string {
     process.env.NEXT_PUBLIC_ESI_USER_AGENT ??
     "eve-pi/0.1.0 (github-pages; +https://github.com/eve-pi)";
   return encodeURIComponent(ua);
+}
+
+function esiHeaders(): Record<string, string> {
+  return {
+    "X-Compatibility-Date": compatibilityDate(),
+    Accept: "application/json",
+    "X-User-Agent":
+      process.env.NEXT_PUBLIC_ESI_USER_AGENT ??
+      "eve-pi/0.1.0 (github-pages)",
+  };
 }
 
 function readCache(): Record<number, string> {
@@ -36,17 +48,17 @@ function writeCache(cache: Record<number, string>) {
   localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
 }
 
-async function fetchNameChunk(ids: number[]): Promise<Record<number, string>> {
-  const url = `https://esi.evetech.net/latest/universe/names/?user_agent=${userAgentParam()}`;
+/** POST /universe/names — solar systems, stations, etc. (not planets). */
+async function fetchSystemNamesChunk(
+  ids: number[],
+): Promise<Record<number, string>> {
+  if (ids.length === 0) return {};
+  const url = `https://esi.evetech.net/latest/universe/names/?datasource=tranquility&user_agent=${userAgentParam()}`;
   const res = await fetch(url, {
     method: "POST",
     headers: {
+      ...esiHeaders(),
       "Content-Type": "application/json",
-      "X-Compatibility-Date": compatibilityDate(),
-      Accept: "application/json",
-      "X-User-Agent":
-        process.env.NEXT_PUBLIC_ESI_USER_AGENT ??
-        "eve-pi/0.1.0 (github-pages)",
     },
     body: JSON.stringify(ids),
   });
@@ -59,23 +71,73 @@ async function fetchNameChunk(ids: number[]): Promise<Record<number, string>> {
   return out;
 }
 
-export async function resolveUniverseNames(
-  ids: number[],
+async function fetchPlanetName(planetId: number): Promise<string | null> {
+  const url = `https://esi.evetech.net/latest/universe/planets/${planetId}/?datasource=tranquility&user_agent=${userAgentParam()}`;
+  const res = await fetch(url, { headers: esiHeaders() });
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    throw new Error(`ESI universe/planets/${planetId} failed: ${res.status}`);
+  }
+  const data = (await res.json()) as { name?: string };
+  return data.name ?? null;
+}
+
+/**
+ * Resolve planet and solar system names for PI colonies.
+ * Planets must use GET /universe/planets/{id}/ — they are not valid for POST /universe/names/.
+ */
+export async function resolveColonyLocationNames(
+  colonies: Pick<ColonySummary, "planet_id" | "solar_system_id">[],
 ): Promise<Record<number, string>> {
-  const unique = [...new Set(ids.filter((id) => Number.isFinite(id) && id > 0))];
-  if (unique.length === 0) return {};
+  const systemIds = [
+    ...new Set(
+      colonies
+        .map((c) => c.solar_system_id)
+        .filter((id) => Number.isFinite(id) && id > 0),
+    ),
+  ];
+  const planetIds = [
+    ...new Set(
+      colonies
+        .map((c) => c.planet_id)
+        .filter((id) => Number.isFinite(id) && id > 0),
+    ),
+  ];
+
+  if (systemIds.length === 0 && planetIds.length === 0) return {};
 
   const cache = readCache();
-  const missing = unique.filter((id) => !cache[id]);
-  for (let i = 0; i < missing.length; i += 1000) {
-    const chunk = missing.slice(i, i + 1000);
-    const fetched = await fetchNameChunk(chunk);
-    Object.assign(cache, fetched);
+
+  const missingSystems = systemIds.filter((id) => !cache[id]);
+  for (let i = 0; i < missingSystems.length; i += 1000) {
+    const chunk = missingSystems.slice(i, i + 1000);
+    try {
+      Object.assign(cache, await fetchSystemNamesChunk(chunk));
+    } catch {
+      for (const id of chunk) {
+        try {
+          Object.assign(cache, await fetchSystemNamesChunk([id]));
+        } catch {
+          /* keep fallback label */
+        }
+      }
+    }
   }
+
+  const missingPlanets = planetIds.filter((id) => !cache[id]);
+  for (const planetId of missingPlanets) {
+    try {
+      const name = await fetchPlanetName(planetId);
+      if (name) cache[planetId] = name;
+    } catch {
+      /* keep fallback label */
+    }
+  }
+
   writeCache(cache);
 
   const result: Record<number, string> = {};
-  for (const id of unique) {
+  for (const id of [...systemIds, ...planetIds]) {
     result[id] = cache[id] ?? `ID ${id}`;
   }
   return result;
