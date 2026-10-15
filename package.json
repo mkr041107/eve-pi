@@ -1,0 +1,42 @@
+{
+  "name": "eve-pi",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "prebuild": "tsx scripts/sync-sde.ts",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "install:deps": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/install-deps.ps1",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "sync:sde": "tsx scripts/sync-sde.ts",
+    "test": "tsx --test src/**/*.test.ts",
+    "clean:modules": "node scripts/clean-modules.mjs",
+    "reinstall": "node scripts/clean-modules.mjs && npm install"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.44.5",
+    "jose": "^6.1.0",
+    "next": "16.4.1",
+    "postgres": "^3.4.7",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "drizzle-kit": "^0.31.4",
+    "dotenv": "^17.2.2",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.1",
+    "tailwindcss": "^4",
+    "tsx": "^4.20.5",
+    "typescript": "^5"
+  }
+}
